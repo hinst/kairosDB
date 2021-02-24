@@ -1,5 +1,11 @@
 import fetch, { RequestInit } from 'node-fetch';
 
+import http from 'http';
+import https from 'https';
+const httpAgent = new http.Agent({ keepAlive: true });
+const httpsAgent = new https.Agent({ keepAlive: true });
+const agent = (_parsedURL: URL) => _parsedURL.protocol == 'https:' ? httpsAgent : httpAgent;
+
 type KairosMultiTags = { [key:string]: string[] };
 type KairosTags = { [key: string]: string };
 
@@ -112,7 +118,10 @@ export class ReadOnlyKairosDB {
 
     async getMetricNames(prefix: string = null): Promise<string[]> {
         const prefixUrlPart = prefix != null ? '?prefix=' + encodeURIComponent(prefix) : '';
-        const response = await fetch(this.apiUrl + '/metricnames' + prefixUrlPart, {compress: true});
+        const response = await fetch(this.apiUrl + '/metricnames' + prefixUrlPart, {
+            agent,
+            compress: true,
+        });
         return (await response.json()).results;
     }
 
@@ -128,8 +137,9 @@ export class ReadOnlyKairosDB {
         return tags;
     }
 
-    getPostJsonRequest(requestObject: any) {
+    protected getPostJsonRequest(requestObject: any) {
         const request: RequestInit = {
+            agent,
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify(requestObject),
@@ -207,21 +217,23 @@ export class ReadOnlyKairosDB {
 
 export class KairosDB extends ReadOnlyKairosDB {
     async deleteMetric(metricName: string) {
-        const response = await fetch(this.apiUrl + '/metric/' + encodeURIComponent(metricName), {method: 'DELETE'});
+        const response = await fetch(this.apiUrl + '/metric/' + encodeURIComponent(metricName), {
+            agent,
+            method: 'DELETE',
+        });
         if (response.status != 204)
             throw new Error(await response.text());
         return response;
     }
 
     async write(items: KairosIncoming[]) {
-        const response = await fetch(this.apiUrl + '/datapoints', {method: 'POST', body: JSON.stringify(items)});
+        const response = await fetch(this.apiUrl + '/datapoints', this.getPostJsonRequest(items));
         if (response.status != 204)
             throw new Error(await response.text());
     }
-    
+
     async delete(request: KairosRequest) {
-        const bodyText = JSON.stringify(request);
-        const response = await fetch(this.apiUrl + '/datapoints/delete', { method: 'POST', body: bodyText });
+        const response = await fetch(this.apiUrl + '/datapoints/delete', this.getPostJsonRequest(request));
         if (response.status != 204)
             throw new Error(await response.text());
         return response;
