@@ -75,6 +75,7 @@ export class KairosQueryResponse {
 }
 export class KairosResponse {
     queries: KairosQueryResponse[];
+    errors: string[];
 }
 
 export class KairosIncoming {
@@ -122,7 +123,8 @@ export class ReadOnlyKairosDB {
             agent,
             compress: true,
         });
-        return (await response.json()).results;
+        const responseObject: any = await response.json();
+        return responseObject.results;
     }
 
     async getMetricTags(metricName: string): Promise<KairosMultiTags> {
@@ -132,7 +134,7 @@ export class ReadOnlyKairosDB {
             metrics: [{ name: metricName, tags: {}}],
         }
         const response = await fetch(this.queryUrl + "/tags", this.getPostJsonRequest(request));
-        const responseObject = await response.json();
+        const responseObject = await response.json() as KairosResponse;
         const tags = responseObject.queries[0].results[0].tags;
         return tags;
     }
@@ -152,7 +154,7 @@ export class ReadOnlyKairosDB {
         const request = this.getPostJsonRequest(requestObject);
         const url = this.apiUrl + "/datapoints/query";
         const response = await fetch(url, request);
-        const obj = await response.json();
+        const obj = await response.json() as KairosResponse;
         if (obj.errors)
             throw obj.errors;
         return obj;
