@@ -156,7 +156,7 @@ export class ReadOnlyKairosDB {
         const response = await fetch(url, request);
         const obj = await response.json() as KairosResponse;
         if (obj.errors)
-            throw obj.errors;
+            throw obj.errors.join('\n');
         return obj;
     }
 
@@ -252,4 +252,15 @@ export function checkKairosItemsEqual(left: KairosItem[], right: KairosItem[]) {
             return false;
     }
     return true;
+}
+
+export enum KairosAggregatorUnits {
+    MILLISECONDS = 'MILLISECONDS',
+    SECONDS = 'SECONDS',
+    MINUTES = 'MINUTES',
+    HOURS = 'HOURS',
+    DAYS = 'DAYS',
+    WEEKS = 'WEEKS',
+    MONTHS = 'MONTHS',
+    YEARS = 'YEARS',
 }
